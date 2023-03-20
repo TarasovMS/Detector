@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Detector</string>
+    <string name="failure_title"> Произошла ошибка</string>
+    <string name="ok">ОК</string>
+    <string name="take_photo_from_camera">Камера</string>
+    <string name="photo_upload_methods">Способ загрузки фото</string>
+    <string name="take_photo_from_gallery">Галерея</string>
+    <string name="clear_photo">Очистить фото</string>
+
+</resources>
