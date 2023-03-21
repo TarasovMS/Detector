@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Faces"
+rootProject.name = "Detector"
 include ':app'
