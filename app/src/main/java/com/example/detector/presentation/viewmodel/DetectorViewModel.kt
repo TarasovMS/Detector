@@ -1,8 +1,11 @@
 package com.example.detector.presentation.viewmodel
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
+import com.example.detector.R
 import com.example.detector.common.BaseViewModel
+import com.example.detector.common.contextProvider.ResourceProviderContext
 import com.example.detector.domain.DetectorUseCase
 import com.example.detector.presentation.ui.detectorScreen.state.DetectorScreenTriggerEvent
 import com.example.detector.presentation.ui.detectorScreen.model.DetectorUiData
@@ -23,9 +26,15 @@ import javax.inject.Inject
 @HiltViewModel
 class DetectorViewModel @Inject constructor(
     private val detectorUseCase: DetectorUseCase,
+    resourceProviderContext: ResourceProviderContext
 ) : BaseViewModel<DetectorScreenTriggerEvent>() {
 
-    private val bitmapImageStateFlow = MutableStateFlow<Bitmap?>(null)
+    private val bitmapImageStateFlow = MutableStateFlow<Bitmap?>(
+        BitmapFactory.decodeResource(
+            resourceProviderContext.getContext().resources,
+            R.drawable.test_photo
+        )
+    )
     private val uriForNewPhotoStateFlow = MutableStateFlow<Uri>(Uri.EMPTY)
     private val faceListStateFlow = MutableStateFlow<List<Face>>(emptyList())
 

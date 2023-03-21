@@ -104,7 +104,8 @@ fun DetectorScreenContent(
 
             val painter = data.photoBitmap?.let {
                 rememberAsyncImagePainter(it)
-            } ?: painterResource(id = R.drawable.ic_add)
+//            } ?: painterResource(id = R.drawable.ic_add)
+            } ?: painterResource(id = R.drawable.test_photo)
 
 
             Image(
@@ -132,12 +133,6 @@ fun DetectorScreenContent(
             ) {
                 Text(text = stringResource(R.string.ok))
             }
-
-//            data.faceList.forEach {
-//                it.allContours.map {
-//                    Text(text = "${it.points} контур ")
-//                }
-//            }
         }
     }
 
@@ -169,7 +164,6 @@ fun DetectorScreenContentPreview() {
 }
 
 
-@OptIn(ExperimentalTextApi::class)
 @Composable
 fun DetectorCanvas(
     modifier: Modifier = Modifier,
@@ -186,8 +180,8 @@ fun DetectorCanvas(
                 val instaColors = listOf(Color.Yellow, Color.Red, Color.Magenta)
 
                 // Draws a circle at the position of the detected face, with the face's track id below.
-                val x: Float = view.translateX(face.boundingBox.centerX())
-                val y: Float = translateY(face.boundingBox.centerY())
+                val x: Float = view.translateX(face.boundingBox.centerX().toFloat())
+                val y: Float = translateY(face.boundingBox.centerY().toFloat())
 
                 drawCircle(
                     brush = Brush.linearGradient(colors = instaColors),
@@ -205,9 +199,6 @@ fun DetectorCanvas(
 //
 //                )
 
-                // Draws a bounding box around the face.
-
-                // Draws a bounding box around the face.
                 val xOffset: Float = scaleX(face.boundingBox.width() / 2.0f)
                 val yOffset: Float = scaleY(face.boundingBox.height() / 2.0f)
                 val left = x - xOffset
@@ -221,7 +212,8 @@ fun DetectorCanvas(
                     brush = Brush.linearGradient(colors = instaColors),
                     cornerRadius = CornerRadius(60f, 60f),
                     style = Stroke(width = 15f, cap = StrokeCap.Round),
-                    topLeft = Offset(x = x, y = y),
+//                    topLeft = Offset(x = x, y = y),
+                    topLeft = Offset(x = left, y = top),
                 )
 //
 
@@ -253,7 +245,7 @@ fun DetectorCanvas(
 //                }
 
                 val leftEye = face.getLandmark(FaceLandmark.LEFT_EYE)
-                if (leftEye != null) {
+                leftEye?.let {
                     drawCircle(
                         brush = Brush.linearGradient(colors = instaColors),
                         radius = 10f,
@@ -261,7 +253,7 @@ fun DetectorCanvas(
                     )
                 }
                 val rightEye = face.getLandmark(FaceLandmark.RIGHT_EYE)
-                if (rightEye != null) {
+                rightEye?.let {
                     drawCircle(
                         brush = Brush.linearGradient(colors = instaColors),
                         radius = 10f,
@@ -273,36 +265,38 @@ fun DetectorCanvas(
                 val contour = face.allContours
                 for (faceContour in contour) {
                     for (point in faceContour.points) {
-                        val px: Float = view.translateX(point.x.toInt())
-                        val py: Float = translateY(point.y.toInt())
+                        val pointX: Float = view.translateX(point.x)
+                        val pointY: Float = translateY(point.y)
+
                         drawCircle(
                             brush = Brush.linearGradient(colors = instaColors),
                             radius = 10f,
-                            center = Offset(px, py),
+                            center = Offset(pointX, pointY),
                         )
                     }
                 }
 
 
                 val leftCheek = face.getLandmark(FaceLandmark.LEFT_CHEEK)
-                if (leftCheek != null) {
+                leftCheek?.let {
                     drawCircle(
                         brush = Brush.linearGradient(colors = instaColors),
                         radius = 10f,
                         center = Offset(
-                            view.translateX(leftCheek.position.x.toInt()),
-                            translateY(leftCheek.position.y.toInt())
+                            view.translateX(leftCheek.position.x),
+                            translateY(leftCheek.position.y)
                         ),
                     )
                 }
+
                 val rightCheek = face.getLandmark(FaceLandmark.RIGHT_CHEEK)
-                if (rightCheek != null) {
+                rightCheek?.let {
                     drawCircle(
                         brush = Brush.linearGradient(colors = instaColors),
                         radius = 10f,
                         center = Offset(
-                            view.translateX(rightCheek.position.x.toInt()),
-                            translateY(rightCheek.position.y.toInt())
+                            view.translateX(rightCheek.position.x),
+                            translateY(rightCheek.position.y)
                         ),
                     )
                 }
@@ -313,12 +307,12 @@ fun DetectorCanvas(
     }
 }
 
-fun View.translateX(x: Int): Float {
-//    return this.width - scaleX(x.toFloat())  //зеркало
+fun View.translateX(x: Float): Float {
+//    return this.width - scaleX(x.toFloat())  //зеркально отображение
     return scaleX(x.toFloat())
 }
 
-fun translateY(y: Int): Float {
+fun translateY(y: Float): Float {
     return scaleY(y.toFloat())
 }
 

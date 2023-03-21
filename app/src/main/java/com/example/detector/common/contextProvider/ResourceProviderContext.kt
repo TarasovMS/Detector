@@ -2,12 +2,15 @@ package com.example.detector.common.contextProvider
 
 import android.content.ContentResolver
 import android.content.ContentValues
+import android.content.Context
 import android.net.Uri
 import androidx.annotation.StringRes
 import java.io.File
 import java.io.OutputStream
 
 interface ResourceProviderContext {
+
+    fun getContext(): Context
 
     fun getInternalFolder(innerFolder: String): File
 

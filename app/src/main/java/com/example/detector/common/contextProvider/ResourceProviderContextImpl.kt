@@ -15,6 +15,8 @@ class ResourceProviderContextImpl @Inject constructor(
     @ApplicationContext private val context: Context,
 ) : ResourceProviderContext {
 
+    override fun getContext() = context
+
     override fun getInternalFolder(innerFolder: String) = File(context.filesDir, innerFolder)
 
     override fun getContentResolver(): ContentResolver = context.contentResolver
