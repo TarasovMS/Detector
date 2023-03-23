@@ -84,7 +84,6 @@ class DetectorViewModel @Inject constructor(
                 //TODO Task failed with an exception
                 e.printStackTrace()
             }
-
     }
 
 //    private fun processFaceContourDetectionResult(faces: List<Face>) {
