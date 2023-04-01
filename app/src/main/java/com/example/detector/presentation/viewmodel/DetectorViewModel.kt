@@ -29,12 +29,13 @@ class DetectorViewModel @Inject constructor(
     resourceProviderContext: ResourceProviderContext
 ) : BaseViewModel<DetectorScreenTriggerEvent>() {
 
-    private val bitmapImageStateFlow = MutableStateFlow<Bitmap?>(
+    private val imageBitmapStateFlow = MutableStateFlow<Bitmap?>(
         BitmapFactory.decodeResource(
             resourceProviderContext.getContext().resources,
             R.drawable.test_photo
         )
     )
+    private val faceBitmapStateFlow = MutableStateFlow<Bitmap?>(null)
     private val uriForNewPhotoStateFlow = MutableStateFlow<Uri>(Uri.EMPTY)
     private val faceListStateFlow = MutableStateFlow<List<Face>>(emptyList())
 
@@ -79,6 +80,13 @@ class DetectorViewModel @Inject constructor(
             .addOnSuccessListener { faces ->
 //                processFaceContourDetectionResult(faces)
                 faceListStateFlow.value = faces
+
+                detectorUseCase.handleDetector(faces, bitmap).fold(
+                    ifLeft = ::handleError,
+                    ifRight = {
+                        faceBitmapStateFlow.value = it
+                    }
+                )
             }
             .addOnFailureListener { e ->
                 //TODO Task failed with an exception
@@ -109,14 +117,14 @@ class DetectorViewModel @Inject constructor(
             detectorUseCase.getImageFromGalleryAndPost(uri).fold(
                 ifLeft = ::handleError,
                 ifRight = {
-                    bitmapImageStateFlow.value = it
+                    imageBitmapStateFlow.value = it
                 }
             )
         }
     }
 
     private fun clearPhoto() {
-        bitmapImageStateFlow.value = null
+        imageBitmapStateFlow.value = null
     }
 
     private fun addImageToGalleryAndPostPhoto() {
@@ -125,7 +133,7 @@ class DetectorViewModel @Inject constructor(
             detectorUseCase.addImageToGalleryAndPost().fold(
                 ifLeft = ::handleError,
                 ifRight = {
-                    bitmapImageStateFlow.value = it
+                    imageBitmapStateFlow.value = it
                 }
             )
         }
@@ -145,11 +153,13 @@ class DetectorViewModel @Inject constructor(
     private fun combineFlows() {
         executeSuspend(Dispatchers.Main) {
             combine(
-                bitmapImageStateFlow,
+                faceBitmapStateFlow,
+                imageBitmapStateFlow,
                 uriForNewPhotoStateFlow,
                 faceListStateFlow,
-            ) { photoBitmap, uriForNewPhoto, faceList ->
+            ) { faceBitmap, photoBitmap, uriForNewPhoto, faceList ->
                 DetectorUiData(
+                    faceBitmapInit = faceBitmap,
                     photoBitmapInit = photoBitmap,
                     uriNewPhotoInit = uriForNewPhoto,
                     faceListInit = faceList,

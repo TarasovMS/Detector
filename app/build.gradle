@@ -114,4 +114,10 @@ dependencies {
     implementation "io.arrow-kt:arrow-core"
     implementation "io.arrow-kt:arrow-fx-stm"
 
+    //TensorFlow Lite libraries (To recognize faces)
+    implementation 'org.tensorflow:tensorflow-lite-task-vision:0.3.0'
+    implementation 'org.tensorflow:tensorflow-lite-support:0.3.0'
+    implementation 'org.tensorflow:tensorflow-lite:0.0.0-nightly-SNAPSHOT'
+
+
 }

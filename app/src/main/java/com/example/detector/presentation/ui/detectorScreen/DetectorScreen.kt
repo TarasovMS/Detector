@@ -12,16 +12,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -88,12 +85,9 @@ fun DetectorScreenContent(
 ) {
     val modifierForImage = modifier
         .fillMaxWidth()
-        .height(300.dp)
+        .size(300.dp)
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-    ) {
+    Box(modifier = modifier.fillMaxSize()) {
 
         Column(
             modifier = modifier
@@ -104,9 +98,7 @@ fun DetectorScreenContent(
 
             val painter = data.photoBitmap?.let {
                 rememberAsyncImagePainter(it)
-//            } ?: painterResource(id = R.drawable.ic_add)
             } ?: painterResource(id = R.drawable.test_photo)
-
 
             Image(
                 painter = painter,
@@ -116,7 +108,6 @@ fun DetectorScreenContent(
                         onClickChangePhoto.invoke()
                     },
                 contentDescription = "",
-//            contentScale = if (data.photoBitmap != null) ContentScale.Crop else
                 contentScale = ContentScale.FillWidth
             )
 
@@ -133,16 +124,25 @@ fun DetectorScreenContent(
             ) {
                 Text(text = stringResource(R.string.ok))
             }
+
+            data.faceBitmap?.let {
+                Box(modifier = modifier) {
+                    DetectorCanvasFace(
+                        modifier = modifier
+                            .fillMaxWidth()
+                            .size(112.dp),
+                        bitmap = it,
+                        faces = data.faceList
+                    )
+                }
+            }
         }
     }
 
     if (data.faceList.isNotEmpty()) {
-        Box(
-            modifier = modifier
-                .fillMaxSize()
-        ) {
+        Box(modifier = modifier.fillMaxSize()) {
             DetectorCanvas(
-                modifier = modifierForImage,
+//                modifier = modifierForImage,
                 faces = data.faceList
             )
         }
@@ -163,17 +163,184 @@ fun DetectorScreenContentPreview() {
     )
 }
 
+@Composable
+fun DetectorCanvasFace(
+    modifier: Modifier = Modifier,
+    bitmap: Bitmap,
+    faces: List<Face>
+) {
+    val view = LocalView.current
+    val painter = rememberAsyncImagePainter(bitmap)
+
+    Image(
+        painter = painter,
+        modifier = modifier,
+        contentDescription = "",
+    )
+
+    Box(modifier = modifier) {
+        val contour = faces.first().allContours
+        for (faceContour in contour) {
+            for (point in faceContour.points) {
+                val pointX: Float = view.translateX(point.x)
+                val pointY: Float = translateY(point.y)
+
+                val instagramColors = listOf(Color.Yellow, Color.Red, Color.Magenta)
+                Canvas(modifier = modifier) {
+                    drawCircle(
+                        brush = Brush.linearGradient(colors = instagramColors),
+                        radius = 10f,
+                        center = Offset(pointX, pointY),
+                    )
+                }
+            }
+        }
+    }
+
+//    Canvas(modifier = modifier) {
+//
+////            faces.firstOrNull() { face -> //если надо показать одно лицо
+//        faces.forEach { face ->
+//            val instaColors = listOf(Color.Yellow, Color.Red, Color.Magenta)
+//
+//            // Draws a circle at the position of the detected face, with the face's track id below.
+//            val x: Float = view.translateX(face.boundingBox.centerX().toFloat())
+//            val y: Float = translateY(face.boundingBox.centerY().toFloat())
+//
+//            drawCircle(
+//                brush = Brush.linearGradient(colors = instaColors),
+//                radius = 10f,
+//                center = Offset(x, y),
+//            )
+//
+////                drawText(
+////                    topLeft = Offset(x + -70.0f, y + 80.0f),
+////                    text = "id: " + face.getTrackingId(),
+//////
+//////                    x + com.google.codelab.mlkit.FaceContourGraphic.ID_X_OFFSET,
+//////                    y + com.google.codelab.mlkit.FaceContourGraphic.ID_Y_OFFSET,
+//////                    idPaint
+////
+////                )
+//
+//            val xOffset: Float = scaleX(face.boundingBox.width() / 2.0f)
+//            val yOffset: Float = scaleY(face.boundingBox.height() / 2.0f)
+//            val left = x - xOffset
+//            val top = y - yOffset
+//            val right = x + xOffset
+//            val bottom = y + yOffset
+//
+////            canvas.drawRect(left, top, right, bottom, boxPaint)
+//
+//            drawRoundRect(
+//                brush = Brush.linearGradient(colors = instaColors),
+//                cornerRadius = CornerRadius(60f, 60f),
+//                style = Stroke(width = 15f, cap = StrokeCap.Round),
+////                    topLeft = Offset(x = x, y = y),
+//                topLeft = Offset(x = left, y = top),
+//            )
+////
+//
+//
+////                if (face.smilingProbability != null) {
+////                    canvas.drawText(
+////                        "happiness: " + String.format("%.2f", face.smilingProbability),
+////                        x + com.google.codelab.mlkit.FaceContourGraphic.ID_X_OFFSET * 3,
+////                        y - com.google.codelab.mlkit.FaceContourGraphic.ID_Y_OFFSET,
+////                        idPaint
+////                    )
+////                }
+////
+////                if (face.rightEyeOpenProbability != null) {
+////                    canvas.drawText(
+////                        "right eye: " + String.format("%.2f", face.rightEyeOpenProbability),
+////                        x - com.google.codelab.mlkit.FaceContourGraphic.ID_X_OFFSET,
+////                        y,
+////                        idPaint
+////                    )
+////                }
+////                if (face.leftEyeOpenProbability != null) {
+////                    canvas.drawText(
+////                        "left eye: " + String.format("%.2f", face.leftEyeOpenProbability),
+////                        x + com.google.codelab.mlkit.FaceContourGraphic.ID_X_OFFSET * 6,
+////                        y,
+////                        idPaint
+////                    )
+////                }
+//
+//            val leftEye = face.getLandmark(FaceLandmark.LEFT_EYE)
+//            leftEye?.let {
+//                drawCircle(
+//                    brush = Brush.linearGradient(colors = instaColors),
+//                    radius = 10f,
+//                    center = Offset(leftEye.position.x, leftEye.position.y),
+//                )
+//            }
+//            val rightEye = face.getLandmark(FaceLandmark.RIGHT_EYE)
+//            rightEye?.let {
+//                drawCircle(
+//                    brush = Brush.linearGradient(colors = instaColors),
+//                    radius = 10f,
+//                    center = Offset(rightEye.position.x, rightEye.position.y),
+//                )
+//            }
+//
+//
+//            val contour = face.allContours
+//            for (faceContour in contour) {
+//                for (point in faceContour.points) {
+//                    val pointX: Float = view.translateX(point.x)
+//                    val pointY: Float = translateY(point.y)
+//
+//                    drawCircle(
+//                        brush = Brush.linearGradient(colors = instaColors),
+//                        radius = 10f,
+//                        center = Offset(pointX, pointY),
+//                    )
+//                }
+//            }
+//
+//
+//            val leftCheek = face.getLandmark(FaceLandmark.LEFT_CHEEK)
+//            leftCheek?.let {
+//                drawCircle(
+//                    brush = Brush.linearGradient(colors = instaColors),
+//                    radius = 10f,
+//                    center = Offset(
+//                        view.translateX(leftCheek.position.x),
+//                        translateY(leftCheek.position.y)
+//                    ),
+//                )
+//            }
+//
+//            val rightCheek = face.getLandmark(FaceLandmark.RIGHT_CHEEK)
+//            rightCheek?.let {
+//                drawCircle(
+//                    brush = Brush.linearGradient(colors = instaColors),
+//                    radius = 10f,
+//                    center = Offset(
+//                        view.translateX(rightCheek.position.x),
+//                        translateY(rightCheek.position.y)
+//                    ),
+//                )
+//            }
+//
+//            false
+//        }
+//    }
+}
+
 
 @Composable
 fun DetectorCanvas(
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier.fillMaxSize(),
     faces: List<Face>
 ) {
     val view = LocalView.current
 
     Column(
     ) {
-        Canvas(modifier = modifier) {
+        Canvas(modifier = modifier.width(100.dp)) {
 
 //            faces.firstOrNull() { face -> //если надо показать одно лицо
             faces.forEach { face ->
@@ -301,7 +468,7 @@ fun DetectorCanvas(
                     )
                 }
 
-                true
+                false
             }
         }
     }
