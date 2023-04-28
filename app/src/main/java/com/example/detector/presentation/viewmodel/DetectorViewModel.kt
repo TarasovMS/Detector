@@ -9,6 +9,7 @@ import com.example.detector.common.contextProvider.ResourceProviderContext
 import com.example.detector.domain.DetectorUseCase
 import com.example.detector.presentation.ui.detectorScreen.state.DetectorScreenTriggerEvent
 import com.example.detector.presentation.ui.detectorScreen.model.DetectorUiData
+import com.example.detector.presentation.ui.detectorScreen.model.FaceRecognition
 import com.example.detector.presentation.ui.detectorScreen.state.DetectorScreenState
 import com.example.detector.presentation.ui.detectorScreen.state.DetectorScreenState.*
 import com.example.detector.presentation.ui.detectorScreen.state.DetectorScreenTriggerEvent.*
@@ -38,6 +39,8 @@ class DetectorViewModel @Inject constructor(
     private val faceBitmapStateFlow = MutableStateFlow<Bitmap?>(null)
     private val uriForNewPhotoStateFlow = MutableStateFlow<Uri>(Uri.EMPTY)
     private val faceListStateFlow = MutableStateFlow<List<Face>>(emptyList())
+    private val faceRecognitionStateFlow =
+        MutableStateFlow<ArrayList<FaceRecognition>>(arrayListOf())
 
     private val _detectorUiStateFlow = MutableStateFlow<DetectorScreenState>(DetectorScreenProgress)
     val detectorUiStateFlow = _detectorUiStateFlow.asStateFlow()
@@ -157,12 +160,14 @@ class DetectorViewModel @Inject constructor(
                 imageBitmapStateFlow,
                 uriForNewPhotoStateFlow,
                 faceListStateFlow,
-            ) { faceBitmap, photoBitmap, uriForNewPhoto, faceList ->
+                faceRecognitionStateFlow,
+            ) { faceBitmap, photoBitmap, uriForNewPhoto, faceList, faceRecognition ->
                 DetectorUiData(
                     faceBitmapInit = faceBitmap,
                     photoBitmapInit = photoBitmap,
                     uriNewPhotoInit = uriForNewPhoto,
                     faceListInit = faceList,
+                    faceRecognitionInit = faceRecognition,
                 )
             }.collect { data ->
                 _detectorUiStateFlow.value = DetectorScreenLoadComplete(data)
