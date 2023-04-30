@@ -43,22 +43,27 @@ import com.example.detector.presentation.ui.detectorScreen.state.DetectorScreenT
 import com.example.detector.presentation.viewmodel.DetectorViewModel
 import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceLandmark
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.withContext
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.Interpreter
 import org.tensorflow.lite.InterpreterApi
 import org.tensorflow.lite.InterpreterFactory
 import org.tensorflow.lite.support.common.FileUtil
+import org.tensorflow.lite.support.common.TensorProcessor
+import org.tensorflow.lite.support.common.ops.DequantizeOp
+import org.tensorflow.lite.support.common.ops.NormalizeOp
 import org.tensorflow.lite.support.image.ImageProcessor
 import org.tensorflow.lite.support.image.TensorImage
 import org.tensorflow.lite.support.image.ops.ResizeOp
+import org.tensorflow.lite.support.label.TensorLabel
+import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
 import java.io.FileInputStream
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
+import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 
 @Composable
@@ -200,6 +205,7 @@ fun DetectorCanvasFace(
 ) {
 
     //Create ByteBuffer to store normalized image
+    val context = LocalContext.current
     val inputSize = 112
     val isModelQuantized = false
     val distance = 1f
@@ -208,6 +214,7 @@ fun DetectorCanvasFace(
     val OUTPUT_SIZE = 192 //Output size of model
     var tfLite: Interpreter? = null
     val modelFile = "mobile_face_net.tflite" //model name
+//    val modelFile = "mobilenet_quant_v1_224.tflite" //model name
 //    val registered = arrayListOf<FaceRecognition>()
 
 
@@ -222,9 +229,17 @@ fun DetectorCanvasFace(
         painter = painter,
         modifier = modifier.clickable {
 
+
             when {
-                registered.size == 0 -> registered.add(FaceRecognition("джей ло", -1f, output))
-                registered.size == 1 -> registered.add(FaceRecognition("я", -1f, output))
+                registered.size == 0 -> {
+                    registered.add(FaceRecognition("джей ло", -1f, output))
+                }
+                registered.size == 1 -> {
+                    registered.add(FaceRecognition("я", -1f, output))
+                }
+                registered.size == 2 -> {
+                    registered.add(FaceRecognition("я", -1f, output))
+                }
                 else -> {}
             }
 
@@ -253,13 +268,9 @@ fun DetectorCanvasFace(
 
 
     //Load model
-//    try {
-    tfLite = loadModelFile((LocalContext.current), modelFile)?.let {
+    tfLite = loadModelFile(context, modelFile)?.let {
         Interpreter(it)
     }
-//    } catch (e: IOException) {
-//        e.printStackTrace()
-//    }
 
     val imgData = ByteBuffer.allocateDirect(1 * inputSize * inputSize * 3 * 4)
     imgData.order(ByteOrder.nativeOrder())
@@ -288,14 +299,17 @@ fun DetectorCanvasFace(
     val outputMap: MutableMap<Int, Any> = java.util.HashMap()
 
     val embeedings = Array(1) { FloatArray(OUTPUT_SIZE) }
-    //output of model will be stored in this variable
+//    output of model will be stored in this variable
 
-    outputMap[0] = embeedings
+    outputMap[0] = embeedings     //    outputMap[0] = embeedings
 
-    tfLite?.let {
-        it.runForMultipleInputsOutputs(inputArray, outputMap)
-    } //Run model
-
+    try {
+        tfLite?.let {
+            it.runForMultipleInputsOutputs(inputArray, outputMap)
+        }
+    } catch (e: IOException) {
+        Log.e("tfliteSupport", "Error reading model", e)
+    }
 
     var distance_local = Float.MAX_VALUE
     val id = "0"
@@ -305,15 +319,15 @@ fun DetectorCanvasFace(
 
     //Compare new face with saved Faces.
     if (registered.size > 0) {
-        val nearest: List<Pair<String, Float>?> = registered.findNearest(embeedings[0])
+        val nearest: List<Pair<String, Float>?> = registered.findNearest(embeedings[0])    //TODO
         //Find 2 closest matching face
         if (nearest[0] != null) {
             val name = nearest[0]!!.first //get name and distance of closest matching face
             // label = name;
             distance_local = nearest[0]!!.second
             if (true) {
-                if (distance_local < distance)
-                //If distance between Closest found face is more than 1.000 ,then output UNKNOWN face.
+                if (distance_local < distance) {
+                    //If distance between Closest found face is more than 1.000 ,then output UNKNOWN face.
 
                     Text(
                         text = """
@@ -323,7 +337,17 @@ fun DetectorCanvasFace(
                     Dist: ${String.format("%.3f", nearest[1]!!.second)}
                     """.trimIndent()
                     )
-                else
+
+                    if (nearest.size >= 3) {
+                        Text(
+                            text = """
+                    3nd Nearest: ${nearest[2]!!.first}
+                    Dist: ${String.format("%.3f", nearest[2]!!.second)}
+                    """.trimIndent()
+                        )
+                    }
+
+                } else {
                     Text(
                         text = """
                     Unknown 
@@ -334,6 +358,16 @@ fun DetectorCanvasFace(
                     Dist: ${String.format("%.3f", nearest[1]!!.second)}
                     """.trimIndent()
                     )
+
+                    if (nearest.size >= 3) {
+                        Text(
+                            text = """
+                    3nd Nearest: ${nearest[2]!!.first}
+                    Dist: ${String.format("%.3f", nearest[2]!!.second)}
+                    """.trimIndent()
+                        )
+                    }
+                }
 
 //                    System.out.println("nearest: " + name + " - distance: " + distance_local);
             } else {
@@ -347,42 +381,6 @@ fun DetectorCanvasFace(
     }
 
 
-    val imageProcessor = ImageProcessor.Builder()
-        .add(ResizeOp(224, 224, ResizeOp.ResizeMethod.BILINEAR))
-        .build()
-
-    var tensorImage = TensorImage(DataType.UINT8)
-
-//    tensorImage.load(bitmap)
-//    tensorImage = imageProcessor.process(tensorImage)
-
-//    val asd_a =tensorImage.height
-
-    val tfLite2: InterpreterApi
-    val context = LocalContext.current
-    // Initialise the model
-    try {
-        val tfliteModel = FileUtil.loadMappedFile(
-            context,
-            modelFile
-        )
-        tfLite2 = InterpreterFactory().create(
-            tfliteModel, InterpreterApi.Options()
-        )
-
-        if (tfLite2 == null) {
-//            val asdasd = asd_a
-        }
-    } catch (e: IOException) {
-        Log.e("tfliteSupport", "Error reading model", e)
-
-    }
-
-// Running inference
-
-//    if (null != tfLite2) {
-//        tfLite2.run(tImage.getBuffer(), probabilityBuffer.getBuffer())
-//    }
 }
 
 
@@ -575,7 +573,7 @@ private fun ArrayList<FaceRecognition>.findNearest(emb: FloatArray): List<Pair<S
             val diff = emb[i] - knownEmb[i]
             distances += diff * diff
         }
-        distances = Math.sqrt(distances.toDouble()).toFloat()
+        distances = sqrt(distances.toDouble()).toFloat()
         if (ret == null || distances < ret.second) {
             prev_ret = ret
             ret = Pair(faceRecognition.name, distances)
@@ -586,5 +584,6 @@ private fun ArrayList<FaceRecognition>.findNearest(emb: FloatArray): List<Pair<S
 
     neighbour_list.add(ret)
     neighbour_list.add(prev_ret)
+
     return neighbour_list
 }

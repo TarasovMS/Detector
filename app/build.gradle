@@ -21,9 +21,6 @@ android {
             useSupportLibrary true
         }
     }
-    aaptOptions {
-        noCompress "tflite"
-    }
 
     buildTypes {
         release {
@@ -31,6 +28,20 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
+    buildscript {
+        repositories {
+            maven { url 'https://google.bintray.com/tensorflow'}
+        }
+    }
+    
+    android {
+        aaptOptions {
+            noCompress "tflite"
+//            noCompress "lite"
+        }
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
