@@ -7,9 +7,14 @@ import com.example.detector.R
 import com.example.detector.common.BaseViewModel
 import com.example.detector.common.contextProvider.ResourceProviderContext
 import com.example.detector.domain.DetectorUseCase
+import com.example.detector.presentation.ui.detectorScreen.model.DetectorBitmaps
 import com.example.detector.presentation.ui.detectorScreen.state.DetectorScreenTriggerEvent
 import com.example.detector.presentation.ui.detectorScreen.model.DetectorUiData
+import com.example.detector.presentation.ui.detectorScreen.model.Embeedings
+import com.example.detector.presentation.ui.detectorScreen.model.FaceData
 import com.example.detector.presentation.ui.detectorScreen.model.FaceRecognition
+import com.example.detector.presentation.ui.detectorScreen.model.NearestName
+import com.example.detector.presentation.ui.detectorScreen.model.MainData
 import com.example.detector.presentation.ui.detectorScreen.state.DetectorScreenState
 import com.example.detector.presentation.ui.detectorScreen.state.DetectorScreenState.*
 import com.example.detector.presentation.ui.detectorScreen.state.DetectorScreenTriggerEvent.*
@@ -27,20 +32,26 @@ import javax.inject.Inject
 @HiltViewModel
 class DetectorViewModel @Inject constructor(
     private val detectorUseCase: DetectorUseCase,
-    resourceProviderContext: ResourceProviderContext
+    contextProvider: ResourceProviderContext
 ) : BaseViewModel<DetectorScreenTriggerEvent>() {
 
     private val imageBitmapStateFlow = MutableStateFlow<Bitmap?>(
         BitmapFactory.decodeResource(
-            resourceProviderContext.getContext().resources,
+            contextProvider.getContext().resources,
             R.drawable.test_photo
         )
     )
     private val faceBitmapStateFlow = MutableStateFlow<Bitmap?>(null)
     private val uriForNewPhotoStateFlow = MutableStateFlow<Uri>(Uri.EMPTY)
     private val faceListStateFlow = MutableStateFlow<List<Face>>(emptyList())
-    private val faceRecognitionStateFlow =
-        MutableStateFlow<ArrayList<FaceRecognition>>(arrayListOf())
+    private val faceRecognitionStateFlow = MutableStateFlow(arrayListOf<FaceRecognition>())
+    private val uiDataStateFlow = MutableStateFlow(DetectorUiData())
+
+    private val detectorBitmapsStateFlow = MutableStateFlow(DetectorBitmaps())
+    private val embeedingsStateFlow = MutableStateFlow(Embeedings())
+    private val faceDataStateFlow = MutableStateFlow(FaceData())
+    private val nearestNameStateFlow = MutableStateFlow(NearestName())
+    private val mainDataStateFlow = MutableStateFlow(MainData())
 
     private val _detectorUiStateFlow = MutableStateFlow<DetectorScreenState>(DetectorScreenProgress)
     val detectorUiStateFlow = _detectorUiStateFlow.asStateFlow()
@@ -49,7 +60,10 @@ class DetectorViewModel @Inject constructor(
         getUriForPhoto()
         detectorUseCase.createTempFilesForPhotos()
         collectErrorFlow()
+
         combineFlows()
+        combineDetectorBitmapsFlows()
+        combineFaceDataFlows()
     }
 
     override fun onTriggerEvent(eventType: DetectorScreenTriggerEvent) {
@@ -86,8 +100,17 @@ class DetectorViewModel @Inject constructor(
 
                 detectorUseCase.handleDetector(faces, bitmap).fold(
                     ifLeft = ::handleError,
-                    ifRight = {
-                        faceBitmapStateFlow.value = it
+                    ifRight = { bitmap ->
+                        faceBitmapStateFlow.value = bitmap
+
+                        bitmap?.let {
+                            detectorUseCase.recognizeImage(bitmap, uiDataStateFlow.value).fold(
+                                ifLeft = ::handleError,
+                                ifRight = { name ->
+                                    nearestNameStateFlow.value = NearestName(name)
+                                }
+                            )
+                        }
                     }
                 )
             }
@@ -96,6 +119,7 @@ class DetectorViewModel @Inject constructor(
                 e.printStackTrace()
             }
     }
+
 
 //    private fun processFaceContourDetectionResult(faces: List<Face>) {
 //        // Task completed successfully
@@ -154,23 +178,60 @@ class DetectorViewModel @Inject constructor(
     }
 
     private fun combineFlows() {
-        executeSuspend(Dispatchers.Main) {
+        executeSuspend(
+            Dispatchers.Main
+        ) {
+            combine(
+                detectorBitmapsStateFlow,
+                embeedingsStateFlow,
+                faceDataStateFlow,
+                nearestNameStateFlow,
+                mainDataStateFlow,
+            ) { detectorBitmaps, embeedings, faceData, nearestName, mainData ->
+                DetectorUiData(
+                    detectorBitmaps = detectorBitmaps,
+                    embeedingsData = embeedings,
+                    faceData = faceData,
+                    nearestName = nearestName,
+                    mainData = mainData,
+                )
+            }.collect { data ->
+                uiDataStateFlow.value = data
+                _detectorUiStateFlow.value = DetectorScreenLoadComplete(data)
+            }
+        }
+    }
+
+    private fun combineDetectorBitmapsFlows() {
+        executeSuspend {
             combine(
                 faceBitmapStateFlow,
-                imageBitmapStateFlow,
                 uriForNewPhotoStateFlow,
+                imageBitmapStateFlow,
+            ) { faceBitmap, uriForNewPhoto, imageBitmap ->
+                DetectorBitmaps(
+                    photoBitmapInit = imageBitmap,
+                    faceBitmapInit = faceBitmap,
+                    uriNewPhotoInit = uriForNewPhoto
+                )
+            }.collect {
+                detectorBitmapsStateFlow.value = it
+            }
+        }
+    }
+
+    private fun combineFaceDataFlows() {
+        executeSuspend {
+            combine(
                 faceListStateFlow,
                 faceRecognitionStateFlow,
-            ) { faceBitmap, photoBitmap, uriForNewPhoto, faceList, faceRecognition ->
-                DetectorUiData(
-                    faceBitmapInit = faceBitmap,
-                    photoBitmapInit = photoBitmap,
-                    uriNewPhotoInit = uriForNewPhoto,
+            ) { faceList, faceRecognition ->
+                FaceData(
                     faceListInit = faceList,
                     faceRecognitionInit = faceRecognition,
                 )
-            }.collect { data ->
-                _detectorUiStateFlow.value = DetectorScreenLoadComplete(data)
+            }.collect {
+                faceDataStateFlow.value = it
             }
         }
     }

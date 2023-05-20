@@ -1,15 +1,13 @@
 package com.example.detector.presentation.ui.detectorScreen
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
-import android.util.Log
-import android.util.Pair
 import android.view.View
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Button
 import androidx.compose.material.Text
+import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -22,7 +20,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -32,8 +29,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.detector.R
+import com.example.detector.common.EMPTY_STRING
 import com.example.detector.presentation.ui.ErrorOccurredScreen
 import com.example.detector.presentation.ui.ProgressIndicatorInCenter
+import com.example.detector.presentation.ui.detectorScreen.model.DetectorBitmaps
 import com.example.detector.presentation.ui.detectorScreen.model.DetectorUiData
 import com.example.detector.presentation.ui.detectorScreen.model.FaceRecognition
 import com.example.detector.presentation.ui.detectorScreen.state.DetectorScreenState
@@ -43,31 +42,10 @@ import com.example.detector.presentation.ui.detectorScreen.state.DetectorScreenT
 import com.example.detector.presentation.viewmodel.DetectorViewModel
 import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceLandmark
-import org.tensorflow.lite.DataType
-import org.tensorflow.lite.Interpreter
-import org.tensorflow.lite.InterpreterApi
-import org.tensorflow.lite.InterpreterFactory
-import org.tensorflow.lite.support.common.FileUtil
-import org.tensorflow.lite.support.common.TensorProcessor
-import org.tensorflow.lite.support.common.ops.DequantizeOp
-import org.tensorflow.lite.support.common.ops.NormalizeOp
-import org.tensorflow.lite.support.image.ImageProcessor
-import org.tensorflow.lite.support.image.TensorImage
-import org.tensorflow.lite.support.image.ops.ResizeOp
-import org.tensorflow.lite.support.label.TensorLabel
-import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
-import java.io.FileInputStream
-import java.io.IOException
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import java.nio.MappedByteBuffer
-import java.nio.channels.FileChannel
-import kotlin.math.roundToInt
-import kotlin.math.sqrt
-
 
 @Composable
 fun DetectorScreen(viewModel: DetectorViewModel = hiltViewModel()) {
+
     val uiState by viewModel.detectorUiStateFlow.collectAsState()
 
     DetectorScreenHandler(
@@ -77,7 +55,7 @@ fun DetectorScreen(viewModel: DetectorViewModel = hiltViewModel()) {
         },
         repeatOperationButton = {
             viewModel.onTriggerEvent(RepeatData(it))
-        }
+        },
     )
 }
 
@@ -93,6 +71,7 @@ fun DetectorScreenHandler(
 //                repeatOperationButton.invoke()
             }
         }
+
         is DetectorScreenLoadComplete -> {
             DetectorScreenBottomSheet(
                 data = uiState.data,
@@ -100,6 +79,7 @@ fun DetectorScreenHandler(
                 repeatOperationButton = repeatOperationButton,
             )
         }
+
         DetectorScreenProgress -> {
             ProgressIndicatorInCenter()
         }
@@ -114,10 +94,6 @@ fun DetectorScreenContent(
     repeatOperationButton: (Bitmap) -> Unit,
     onClickChangePhoto: () -> Unit,
 ) {
-    val modifierForImage = modifier
-        .fillMaxWidth()
-        .size(300.dp)
-
     Box(modifier = modifier.fillMaxSize()) {
 
         Column(
@@ -127,28 +103,31 @@ fun DetectorScreenContent(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
 
-            val painter = data.photoBitmap?.let {
+            val painter = data.detectorBitmaps.photoBitmap?.let {
                 rememberAsyncImagePainter(it)
             } ?: painterResource(id = R.drawable.test_photo)
 
             Image(
                 painter = painter,
-                modifier = modifierForImage
+                modifier = modifier
+                    .padding(top = 16.dp)
+                    .fillMaxWidth()
+                    .size(300.dp)
                     .background(colorResource(id = R.color.white))
                     .clickable {
                         onClickChangePhoto.invoke()
                     },
-                contentDescription = "",
+                contentDescription = EMPTY_STRING,
                 contentScale = ContentScale.FillWidth
             )
 
             Button(
                 modifier = modifier
-                    .padding(start = 8.dp, end = 8.dp, bottom = 8.dp)
+                    .padding(horizontal = 8.dp, vertical = 8.dp)
                     .fillMaxWidth()
                     .align(Alignment.CenterHorizontally),
                 onClick = {
-                    data.photoBitmap?.let {
+                    data.detectorBitmaps.photoBitmap?.let {
                         repeatOperationButton.invoke(it)
                     }
                 },
@@ -156,99 +135,38 @@ fun DetectorScreenContent(
                 Text(text = stringResource(R.string.ok))
             }
 
-            data.faceBitmap?.let {
+            data.detectorBitmaps.faceBitmap?.let {
                 Column(modifier = modifier) {
                     DetectorCanvasFace(
                         modifier = modifier
                             .fillMaxWidth()
                             .size(112.dp),
                         bitmap = it,
-                        faces = data.faceList,
-                        registered = data.faceRecognition,
+                        data = data,
                     )
                 }
             }
         }
     }
-
-//    if (data.faceList.isNotEmpty()) {
-//        Box(modifier = modifier.fillMaxSize()) {
-//            DetectorCanvas(
-////                modifier = modifierForImage,
-//                faces = data.faceList
-//            )
-//        }
-//    }
 }
-
-@Preview(showBackground = true)
-@Composable
-fun DetectorScreenContentPreview() {
-    DetectorScreenContent(
-        data = DetectorUiData(
-            photoBitmapInit = null,
-            uriNewPhotoInit = Uri.EMPTY,
-        ),
-        uiTrigger = {},
-        repeatOperationButton = {},
-        onClickChangePhoto = {},
-    )
-}
-
 
 @Composable
 fun DetectorCanvasFace(
     modifier: Modifier = Modifier,
     bitmap: Bitmap,
-    faces: List<Face>,
-    registered: ArrayList<FaceRecognition>,
+    data: DetectorUiData,
 ) {
-
-    //Create ByteBuffer to store normalized image
-    val context = LocalContext.current
-    val inputSize = 112
-    val isModelQuantized = false
-    val distance = 1f
-    val IMAGE_MEAN = 128.0f
-    val IMAGE_STD = 128.0f
-    val OUTPUT_SIZE = 192 //Output size of model
-    var tfLite: Interpreter? = null
-    val modelFile = "mobile_face_net.tflite" //model name
-//    val modelFile = "mobilenet_quant_v1_224.tflite" //model name
-//    val registered = arrayListOf<FaceRecognition>()
-
-
     val view = LocalView.current
     val painter = rememberAsyncImagePainter(bitmap)
 
-    val output = Array(1) {
-        FloatArray(OUTPUT_SIZE)
-    }
-
     Image(
+        modifier = modifier,
         painter = painter,
-        modifier = modifier.clickable {
-
-
-            when {
-                registered.size == 0 -> {
-                    registered.add(FaceRecognition("джей ло", -1f, output))
-                }
-                registered.size == 1 -> {
-                    registered.add(FaceRecognition("я", -1f, output))
-                }
-                registered.size == 2 -> {
-                    registered.add(FaceRecognition("я", -1f, output))
-                }
-                else -> {}
-            }
-
-        },
         contentDescription = "",
     )
 
     Box(modifier = modifier) {
-        val contour = faces.first().allContours
+        val contour = data.faceData.faceList.first().allContours
         for (faceContour in contour) {
             for (point in faceContour.points) {
                 val pointX: Float = view.translateX(point.x)
@@ -266,123 +184,30 @@ fun DetectorCanvasFace(
         }
     }
 
+    Text(text = data.nearestName.name)
 
-    //Load model
-    tfLite = loadModelFile(context, modelFile)?.let {
-        Interpreter(it)
+    TextButton(
+        onClick = { data.mainData.showDialog = true }
+    ) {
+        Text(text = "Добавить лицо")
     }
 
-    val imgData = ByteBuffer.allocateDirect(1 * inputSize * inputSize * 3 * 4)
-    imgData.order(ByteOrder.nativeOrder())
-    val intValues = IntArray(inputSize * inputSize)
-
-//    bitmap.getPixels(intValues, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
-
-    imgData.rewind()
-
-    for (i in 0 until inputSize) {
-        for (j in 0 until inputSize) {
-            val pixelValue = intValues[i * inputSize + j]
-            if (isModelQuantized) {
-                // Quantized model
-                imgData.put((pixelValue shr 16 and 0xFF).toByte())
-                imgData.put((pixelValue shr 8 and 0xFF).toByte())
-                imgData.put((pixelValue and 0xFF).toByte())
-            } else { // Float model
-                imgData.putFloat(((pixelValue shr 16 and 0xFF) - IMAGE_MEAN) / IMAGE_STD)
-                imgData.putFloat(((pixelValue shr 8 and 0xFF) - IMAGE_MEAN) / IMAGE_STD)
-                imgData.putFloat(((pixelValue and 0xFF) - IMAGE_MEAN) / IMAGE_STD)
-            }
-        }
-    }
-    val inputArray = arrayOf<Any>(imgData)
-    val outputMap: MutableMap<Int, Any> = java.util.HashMap()
-
-    val embeedings = Array(1) { FloatArray(OUTPUT_SIZE) }
-//    output of model will be stored in this variable
-
-    outputMap[0] = embeedings     //    outputMap[0] = embeedings
-
-    try {
-        tfLite?.let {
-            it.runForMultipleInputsOutputs(inputArray, outputMap)
-        }
-    } catch (e: IOException) {
-        Log.e("tfliteSupport", "Error reading model", e)
-    }
-
-    var distance_local = Float.MAX_VALUE
-    val id = "0"
-    val label = "?"
-
-    //Compare new face with saved Faces.
-
-    //Compare new face with saved Faces.
-    if (registered.size > 0) {
-        val nearest: List<Pair<String, Float>?> = registered.findNearest(embeedings[0])    //TODO
-        //Find 2 closest matching face
-        if (nearest[0] != null) {
-            val name = nearest[0]!!.first //get name and distance of closest matching face
-            // label = name;
-            distance_local = nearest[0]!!.second
-            if (true) {
-                if (distance_local < distance) {
-                    //If distance between Closest found face is more than 1.000 ,then output UNKNOWN face.
-
-                    Text(
-                        text = """
-                    Nearest: $name
-                    Dist: ${String.format("%.3f", distance_local)}
-                    2nd Nearest: ${nearest[1]!!.first}
-                    Dist: ${String.format("%.3f", nearest[1]!!.second)}
-                    """.trimIndent()
-                    )
-
-                    if (nearest.size >= 3) {
-                        Text(
-                            text = """
-                    3nd Nearest: ${nearest[2]!!.first}
-                    Dist: ${String.format("%.3f", nearest[2]!!.second)}
-                    """.trimIndent()
+    if (data.mainData.showDialog)
+        AddNameAlertDialog(
+            data = data.mainData,
+            onClickAdd = {
+                with(data.faceData) {
+                    faceRecognition.add(
+                        FaceRecognition(
+                            data.mainData.name,
+                            -1f,
+                            data.embeedingsData.embeedings
                         )
-                    }
-
-                } else {
-                    Text(
-                        text = """
-                    Unknown 
-                    Dist: ${String.format("%.3f", distance_local)}
-                    Nearest: $name
-                    Dist: ${String.format("%.3f", distance_local)}
-                    2nd Nearest: ${nearest[1]!!.first}
-                    Dist: ${String.format("%.3f", nearest[1]!!.second)}
-                    """.trimIndent()
                     )
-
-                    if (nearest.size >= 3) {
-                        Text(
-                            text = """
-                    3nd Nearest: ${nearest[2]!!.first}
-                    Dist: ${String.format("%.3f", nearest[2]!!.second)}
-                    """.trimIndent()
-                        )
-                    }
                 }
-
-//                    System.out.println("nearest: " + name + " - distance: " + distance_local);
-            } else {
-                if (distance_local < distance) //If distance between Closest found face is more than 1.000 ,then output UNKNOWN face.
-                    Text(text = name)
-                else
-                    Text(text = "Unknown")
-                //                    System.out.println("nearest: " + name + " - distance: " + distance_local);
             }
-        }
-    }
-
-
+        )
 }
-
 
 @Composable
 fun DetectorCanvas(
@@ -529,11 +354,11 @@ fun DetectorCanvas(
 
 fun View.translateX(x: Float): Float {
 //    return this.width - scaleX(x.toFloat())  //зеркально отображение
-    return scaleX(x.toFloat())
+    return scaleX(x)
 }
 
 fun translateY(y: Float): Float {
-    return scaleY(y.toFloat())
+    return scaleY(y)
 }
 
 fun scaleX(x: Float): Float {
@@ -544,46 +369,19 @@ fun scaleY(y: Float): Float {
     return y * 1.0f
 }
 
-private fun loadModelFile(activity: Context, MODEL_FILE: String): MappedByteBuffer? {
-    return try {
-        val fileDescriptor = activity.assets.openFd(MODEL_FILE)
-        val inputStream = FileInputStream(fileDescriptor.fileDescriptor)
-        val fileChannel = inputStream.channel
-        val startOffset = fileDescriptor.startOffset
-        val declaredLength = fileDescriptor.declaredLength
-        fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)
-    } catch (exception: Exception) {
-        null
-    }
-}
-
-
-//    public void register(String name, SimilarityClassifier.Recognition rec) {
-//        registered.put(name, rec);
-//    }
-private fun ArrayList<FaceRecognition>.findNearest(emb: FloatArray): List<Pair<String, Float>?> {
-    val neighbour_list: MutableList<Pair<String, Float>?> = ArrayList()
-    var ret: Pair<String, Float>? = null //to get closest match
-    var prev_ret: Pair<String, Float>? = null //to get second closest match
-
-    for (faceRecognition in this) {
-        val knownEmb = FloatArray(192)
-        var distances = 0f
-        for (i in emb.indices) {
-            val diff = emb[i] - knownEmb[i]
-            distances += diff * diff
-        }
-        distances = sqrt(distances.toDouble()).toFloat()
-        if (ret == null || distances < ret.second) {
-            prev_ret = ret
-            ret = Pair(faceRecognition.name, distances)
-        }
-    }
-    if (prev_ret == null)
-        prev_ret = ret
-
-    neighbour_list.add(ret)
-    neighbour_list.add(prev_ret)
-
-    return neighbour_list
+@Preview(showBackground = true)
+@Composable
+fun DetectorScreenContentPreview() {
+    DetectorScreenContent(
+        data = DetectorUiData(
+            detectorBitmaps = DetectorBitmaps(
+                photoBitmapInit = null,
+                faceBitmapInit = null,
+                uriNewPhotoInit = Uri.EMPTY
+            ),
+        ),
+        uiTrigger = {},
+        repeatOperationButton = {},
+        onClickChangePhoto = {},
+    )
 }

@@ -10,7 +10,6 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -48,7 +47,9 @@ class MainActivity : ComponentActivity() {
 
         initNavListener(
             navController = navController,
-            title = { " asdasd" },
+            title = {
+                       //TODO
+            },
         )
     }
 
@@ -61,9 +62,7 @@ class MainActivity : ComponentActivity() {
             NavHost(
                 navController = navController,
                 startDestination = DetectorFaceScreen.route,
-                modifier = modifier
-                    .padding(innerPadding)
-                    .padding(horizontal = 16.dp),
+                modifier = modifier.padding(innerPadding)
             ) {
                 bottomNavigationScreens()
             }

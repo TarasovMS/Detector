@@ -68,7 +68,7 @@ fun DetectorScreenBottomSheet(
                             }
 
                             cameraPicker.launch(
-                                data.uriNewPhoto
+                                data.detectorBitmaps.uriNewPhoto
                             )
                         }
                     },
@@ -98,7 +98,7 @@ fun DetectorScreenBottomSheet(
                     bottomSheetState.show()
                 }
             },
-            repeatOperationButton = repeatOperationButton
+            repeatOperationButton = repeatOperationButton,
         )
     }
 }
