@@ -7,4 +7,10 @@
     <string name="take_photo_from_gallery">Галерея</string>
     <string name="clear_photo">Очистить фото</string>
 
+
+    <string name="name_field_error">Имя не должно быть пустым</string>
+    <string name="enter_name">Введите имя</string>
+    <string name="add">Добавить</string>
+    <string name="add_face">Добавить лицо</string>
+
 </resources>

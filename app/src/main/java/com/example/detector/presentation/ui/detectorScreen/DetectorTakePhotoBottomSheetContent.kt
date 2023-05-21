@@ -23,11 +23,12 @@ import com.google.accompanist.permissions.rememberMultiplePermissionsState
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun ProfileTakePhotoBottomSheetContent(detectorUiCallback: DetectorUiCallback) {
+fun ProfileTakePhotoBottomSheetContent(
+    modifier: Modifier = Modifier,
+    detectorUiCallback: DetectorUiCallback,
+) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(200.dp),
+        modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
@@ -44,43 +45,52 @@ fun ProfileTakePhotoBottomSheetContent(detectorUiCallback: DetectorUiCallback) {
         )
 
         Text(
-            modifier = Modifier.padding(vertical = 12.dp),
+            modifier = modifier.padding(vertical = 12.dp),
             text = stringResource(id = R.string.photo_upload_methods),
             color = colorResource(R.color.cl_de767676),
             fontSize = 12.sp
         )
 
         Divider(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = modifier.fillMaxWidth(),
             color = colorResource(R.color.cl_de767676),
-            thickness = 0.5.dp
+            thickness = 1.dp
         )
 
-        PhotoBottomSheetRow(R.string.take_photo_from_camera, R.color.bottom_sheet_text_color) {
+        PhotoBottomSheetRow(
+            text = R.string.take_photo_from_camera,
+            color = R.color.bottom_sheet_text_color
+        ) {
             if (!permissionsState.allPermissionsGranted)
                 permissionsState.launchMultiplePermissionRequest()
             detectorUiCallback.camera.invoke()
         }
 
         Divider(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = modifier.fillMaxWidth(),
             color = colorResource(R.color.cl_de767676),
-            thickness = 0.5.dp
+            thickness = 1.dp
         )
 
-        PhotoBottomSheetRow(R.string.take_photo_from_gallery, R.color.bottom_sheet_text_color) {
+        PhotoBottomSheetRow(
+            text = R.string.take_photo_from_gallery,
+            color = R.color.bottom_sheet_text_color
+        ) {
             if (!permissionsState.allPermissionsGranted)
                 permissionsState.launchMultiplePermissionRequest()
             detectorUiCallback.gallery.invoke()
         }
 
         Divider(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = modifier.fillMaxWidth(),
             color = colorResource(R.color.cl_de767676),
-            thickness = 0.5.dp
+            thickness = 1.dp
         )
 
-        PhotoBottomSheetRow(R.string.clear_photo, R.color.error_color) {
+        PhotoBottomSheetRow(
+            text = R.string.clear_photo,
+            color = R.color.error_color,
+        ) {
             detectorUiCallback.clearPhoto.invoke()
         }
     }
@@ -88,12 +98,13 @@ fun ProfileTakePhotoBottomSheetContent(detectorUiCallback: DetectorUiCallback) {
 
 @Composable
 fun PhotoBottomSheetRow(
+    modifier: Modifier = Modifier,
     @StringRes text: Int,
     @ColorRes color: Int,
     itemClick: () -> Unit,
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable {
                 itemClick.invoke()
@@ -101,7 +112,7 @@ fun PhotoBottomSheetRow(
         horizontalArrangement = Arrangement.Center
     ) {
         Text(
-            modifier = Modifier.padding(vertical = 16.dp),
+            modifier = modifier.padding(vertical = 16.dp),
             color = colorResource(id = color),
             text = stringResource(id = text)
         )
@@ -112,7 +123,7 @@ fun PhotoBottomSheetRow(
 @Composable
 fun ProfileTakePhotoBottomSheetContentPreview() {
     ProfileTakePhotoBottomSheetContent(
-        DetectorUiCallback(
+        detectorUiCallback = DetectorUiCallback(
             cameraPermissionGranted = { /*no-op*/ },
             camera = { /*no-op*/ },
             gallery = { /*no-op*/ },

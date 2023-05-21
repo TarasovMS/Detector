@@ -27,8 +27,8 @@ class DetectorUseCase @Inject constructor(
     private val contextProvider: ResourceProviderContext,
 ) {
 
-    fun createTempFilesForPhotos() {
-        detectorRepository.createTempFilesForPhotos()
+    init {
+        createTempFilesForPhotos()
     }
 
     suspend fun getUriForPhoto(): Either<Nothing, Uri> {
@@ -112,9 +112,9 @@ class DetectorUseCase @Inject constructor(
 
 //    output of model will be stored in this variable
 
-        data.embeedingsData.embeedings = Array(1) { FloatArray(OUTPUT_SIZE) }
+        data.faceData.faceModelData = Array(1) { FloatArray(OUTPUT_SIZE) }
 
-        outputMap[0] = data.embeedingsData.embeedings
+        outputMap[0] = data.faceData.faceModelData
 
         try {
             tfLite?.let {
@@ -127,7 +127,7 @@ class DetectorUseCase @Inject constructor(
         //Compare new face with saved Faces.
         return if (data.faceData.faceRecognition.size > 0) {
             val nearest: List<Pair<String, Float>?> =
-                data.faceData.faceRecognition.findNearest(data.embeedingsData.embeedings.first())    //TODO
+                data.faceData.faceRecognition.findNearest(data.faceData.faceModelData.first())    //TODO
             //Find 2 closest matching face
 
             if (nearest[0] != null) {
@@ -228,6 +228,10 @@ class DetectorUseCase @Inject constructor(
         neighbourList.add(prevRet)
 
         return neighbourList
+    }
+
+    private fun createTempFilesForPhotos() {
+        detectorRepository.createTempFilesForPhotos()
     }
 
     private companion object {

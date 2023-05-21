@@ -7,8 +7,10 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.example.detector.R
 import com.example.detector.presentation.ui.detectorScreen.model.MainData
 
 @Composable
@@ -24,7 +26,7 @@ fun AddNameAlertDialog(
             color = MaterialTheme.colors.surface,
         ) {
             Column(modifier = modifier.padding(16.dp)) {
-                NameTextField(data = data, textLabel = "введите Имя")
+                NameTextField(data = data, textLabel = stringResource(id = R.string.enter_name))
 
                 Row(
                     modifier = modifier.fillMaxWidth(),
@@ -38,7 +40,7 @@ fun AddNameAlertDialog(
                             }
                         }
                     ) {
-                        Text(text = "Добавить")
+                        Text(text = stringResource(id = R.string.add))
                     }
                 }
             }

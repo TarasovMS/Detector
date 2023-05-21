@@ -1,6 +1,5 @@
 package com.example.detector.presentation.ui.detectorScreen
 
-import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -21,7 +20,6 @@ import kotlinx.coroutines.launch
 fun DetectorScreenBottomSheet(
     data: DetectorUiData,
     uiTrigger: (DetectorScreenTriggerEvent) -> Unit,
-    repeatOperationButton: (Bitmap) -> Unit,
 ) {
     val coroutineScope = rememberCoroutineScope()
     var cameraPermissionGranted by remember { mutableStateOf(false) }
@@ -92,13 +90,12 @@ fun DetectorScreenBottomSheet(
     ) {
         DetectorScreenContent(
             data = data,
-            uiTrigger = {},
+            uiTrigger = uiTrigger,
             onClickChangePhoto = {
                 coroutineScope.launch {
                     bottomSheetState.show()
                 }
             },
-            repeatOperationButton = repeatOperationButton,
         )
     }
 }
